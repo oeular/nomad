@@ -9852,6 +9852,61 @@ func TestStateStore_UpsertScalingEvent_LimitAndOrder(t *testing.T) {
 	require.Equal(expectedEvents, actualEvents)
 }
 
+func TestStateStore_SecureVariables_CRUD(t *testing.T) {
+
+	namespaces := []string{"default", "prod", "dev"}
+	paths := []string{
+		"secret/f/b/f",
+		"secret/f/c/f",
+		"secret/foo/foo",
+		"secret/foobar/foobar",
+		"secret/bar/foo",
+		"secret/foob/foob",
+		"secret/f/a/f",
+		"secret/f/f/f",
+	}
+	store := testStateStore(t)
+	idx := uint64(1)
+
+	for _, ns := range namespaces {
+		for _, path := range paths {
+			idx++
+			require.NoError(t, store.UpsertSecureVariables(idx, []*structs.DirEntry{
+				{
+					Namespace: ns,
+					Path:      path,
+					Version:   0,
+				},
+			}))
+		}
+	}
+	entry, err := store.SecureVariablesByPath(nil, "default", "secret/f/a/f")
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.Equal(t, uint64(8), entry.CreateIndex)
+
+	gotPaths := []string{}
+	entries, err := store.SecureVariablesByPrefix(nil, "default", "secret/f")
+	for {
+		raw := entries.Next()
+		if raw == nil {
+			break
+		}
+		entry := raw.(*structs.DirEntry)
+		require.NotNil(t, entry)
+		gotPaths = append(gotPaths, entry.Path)
+	}
+	require.Equal(t, []string{
+		"secret/f/a/f",
+		"secret/f/b/f",
+		"secret/f/c/f",
+		"secret/f/f/f",
+		"secret/foo/foo",
+		"secret/foob/foob",
+		"secret/foobar/foobar",
+	}, gotPaths)
+}
+
 func TestStateStore_Abandon(t *testing.T) {
 	ci.Parallel(t)
 

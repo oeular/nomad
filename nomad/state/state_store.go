@@ -6590,3 +6590,67 @@ func (s *StateSnapshot) DenormalizeAllocationDiffSlice(allocDiffs []*structs.All
 func getPreemptedAllocDesiredDescription(preemptedByAllocID string) string {
 	return fmt.Sprintf("Preempted by alloc ID %v", preemptedByAllocID)
 }
+
+func (s *StateStore) SecureVariablesByPrefix(ws memdb.WatchSet, namespace, path string) (memdb.ResultIterator, error) {
+	txn := s.db.ReadTxn()
+
+	iter, err := txn.Get(TableSecureVariables, indexID+"_prefix", namespace, path)
+	if err != nil {
+		return nil, err
+	}
+
+	ws.Add(iter.WatchCh())
+	return iter, nil
+}
+
+func (s *StateStore) SecureVariablesByPath(ws memdb.WatchSet, namespace, path string) (*structs.DirEntry, error) {
+	txn := s.db.ReadTxn()
+
+	watchCh, obj, err := txn.FirstWatch(TableSecureVariables, indexID, namespace, path)
+	if err != nil {
+		return nil, fmt.Errorf("%s lookup failed: %s/%s %v", TableSecureVariables, namespace, path, err)
+	}
+
+	ws.Add(watchCh)
+	if obj != nil {
+		return obj.(*structs.DirEntry), nil
+	}
+	return nil, nil
+}
+
+func (s *StateStore) UpsertSecureVariables(index uint64, dirEntries []*structs.DirEntry) error {
+	txn := s.db.WriteTxn(index)
+	defer txn.Abort()
+
+	for _, dirEntry := range dirEntries {
+		if err := s.upsertSecureVariableImpl(index, txn, dirEntry); err != nil {
+			return err
+		}
+	}
+
+	if err := txn.Insert("index", &IndexEntry{TableSecureVariables, index}); err != nil {
+		return fmt.Errorf("index update failed: %v", err)
+	}
+
+	return txn.Commit()
+}
+
+func (s *StateStore) upsertSecureVariableImpl(index uint64, txn *txn, dirEntry *structs.DirEntry) error {
+
+	dirEntry.CreateIndex = index
+	dirEntry.ModifyIndex = index
+
+	existing, err := txn.First(TableSecureVariables, indexID, dirEntry.Namespace, dirEntry.Path)
+	if err != nil {
+		return fmt.Errorf("dir entry lookup failed: %v", err)
+	}
+	if existing != nil {
+		exist := existing.(*structs.DirEntry)
+		dirEntry.CreateIndex = exist.CreateIndex
+	}
+
+	if err := txn.Insert(TableSecureVariables, dirEntry); err != nil {
+		return fmt.Errorf("dir entry insert failed: %v", err)
+	}
+	return nil
+}

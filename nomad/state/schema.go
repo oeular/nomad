@@ -70,6 +70,8 @@ func init() {
 		scalingEventTableSchema,
 		namespaceTableSchema,
 		serviceRegistrationsTableSchema,
+		secureVariablesTableSchema,
+		secureVariablesTombstonesTableSchema,
 	}...)
 }
 
@@ -1197,6 +1199,80 @@ func serviceRegistrationsTableSchema() *memdb.TableSchema {
 				Unique:       false,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "AllocID",
+				},
+			},
+		},
+	}
+}
+
+const TableSecureVariables = "secure_variables"
+const TableSecureVariablesTombstones = "secure_variables_tombstones"
+const TableSecureVariablesQuotas = "secure_variables_quota"
+
+// secureVariablesTableSchema returns the MemDB schema for Nomad
+// secure variables.
+func secureVariablesTableSchema() *memdb.TableSchema {
+	return &memdb.TableSchema{
+		Name: TableSecureVariables,
+		Indexes: map[string]*memdb.IndexSchema{
+			indexID: {
+				Name:         indexID,
+				AllowMissing: false,
+				Unique:       true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "Namespace",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Path",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// secureVariablesQuotasTableSchema returns the MemDB schema for Nomad
+// secure variables quotas tracking
+func secureVariablesQuotasTableSchema() *memdb.TableSchema {
+	return &memdb.TableSchema{
+		Name: TableSecureVariablesQuotas,
+		Indexes: map[string]*memdb.IndexSchema{
+			indexID: {
+				Name:         indexID,
+				AllowMissing: false,
+				Unique:       true,
+				Indexer: &memdb.StringFieldIndex{
+					Field:     "Namespace",
+					Lowercase: true,
+				},
+			},
+		},
+	}
+}
+
+// secureVariablesTombstonesTableSchema returns a new table schema used for storing
+// tombstones during Secure Variables destroy operations to prevent
+// the index from sliding backwards.
+func secureVariablesTombstonesTableSchema() *memdb.TableSchema {
+	return &memdb.TableSchema{
+		Name: TableSecureVariablesTombstones,
+		Indexes: map[string]*memdb.IndexSchema{
+			indexID: {
+				Name:         indexID,
+				AllowMissing: false,
+				Unique:       true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "Namespace",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Path",
+						},
+					},
 				},
 			},
 		},

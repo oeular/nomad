@@ -1174,6 +1174,84 @@ func TestServiceRegistration_GetService(t *testing.T) {
 			},
 			name: "filtering and pagination",
 		},
+		{
+			name: "choose 2",
+			serverFn: func(t *testing.T) (*Server, *structs.ACLToken, func()) {
+				server, cleanup := TestServer(t, nil)
+				return server, nil, cleanup
+			},
+			testFn: func(t *testing.T, s *Server, _ *structs.ACLToken) {
+				codec := rpcClient(t, s)
+				testutil.WaitForLeader(t, s.RPC)
+
+				// insert 3 instances of service s1
+				nodeID, jobID, allocID := "node_id", "job_id", "alloc_id"
+				services := []*structs.ServiceRegistration{
+					{
+						ID:          "id_1",
+						Namespace:   "default",
+						ServiceName: "s1",
+						NodeID:      nodeID,
+						Datacenter:  "dc1",
+						JobID:       jobID,
+						AllocID:     allocID,
+						Tags:        []string{"tag1"},
+						Address:     "10.0.0.1",
+						Port:        9001,
+						CreateIndex: 101,
+						ModifyIndex: 201,
+					},
+					{
+						ID:          "id_2",
+						Namespace:   "default",
+						ServiceName: "s1",
+						NodeID:      nodeID,
+						Datacenter:  "dc1",
+						JobID:       jobID,
+						AllocID:     allocID,
+						Tags:        []string{"tag2"},
+						Address:     "10.0.0.2",
+						Port:        9002,
+						CreateIndex: 102,
+						ModifyIndex: 202,
+					},
+					{
+						ID:          "id_3",
+						Namespace:   "default",
+						ServiceName: "s1",
+						NodeID:      nodeID,
+						Datacenter:  "dc1",
+						JobID:       jobID,
+						AllocID:     allocID,
+						Tags:        []string{"tag3"},
+						Address:     "10.0.0.3",
+						Port:        9003,
+						CreateIndex: 103,
+						ModifyIndex: 103,
+					},
+				}
+				require.NoError(t, s.fsm.State().UpsertServiceRegistrations(structs.MsgTypeTestSetup, 10, services))
+
+				serviceRegReq := &structs.ServiceRegistrationByNameRequest{
+					ServiceName: "s1",
+					Choose:      "2|abc123", // select 2 in consistent order
+					QueryOptions: structs.QueryOptions{
+						Namespace: structs.DefaultNamespace,
+						Region:    DefaultRegion,
+					},
+				}
+				var serviceRegResp structs.ServiceRegistrationByNameResponse
+				err := msgpackrpc.CallWithCodec(
+					codec, structs.ServiceRegistrationGetServiceRPCMethod, serviceRegReq, &serviceRegResp)
+				require.NoError(t, err)
+
+				result := serviceRegResp.Services
+
+				require.Len(t, result, 2)
+				require.Equal(t, "10.0.0.3", result[0].Address)
+				require.Equal(t, "10.0.0.2", result[1].Address)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1183,4 +1261,80 @@ func TestServiceRegistration_GetService(t *testing.T) {
 			tc.testFn(t, server, aclToken)
 		})
 	}
+}
+
+func TestServiceRegistration_chooseErr(t *testing.T) {
+	ci.Parallel(t)
+
+	sr := (*ServiceRegistration)(nil)
+	try := func(input []*structs.ServiceRegistration, parameter string) {
+		result, err := sr.choose(input, parameter)
+		require.Empty(t, result)
+		require.ErrorIs(t, err, structs.ErrMalformedChooseParameter)
+	}
+
+	regs := []*structs.ServiceRegistration{
+		{ID: "abc001", ServiceName: "s1"},
+		{ID: "abc002", ServiceName: "s2"},
+		{ID: "abc003", ServiceName: "s3"},
+	}
+
+	try(regs, "")
+	try(regs, "1|")
+	try(regs, "|abc")
+	try(regs, "a|abc")
+}
+
+func TestServiceRegistration_choose(t *testing.T) {
+	ci.Parallel(t)
+
+	sr := (*ServiceRegistration)(nil)
+	try := func(input, exp []*structs.ServiceRegistration, parameter string) {
+		result, err := sr.choose(input, parameter)
+		require.NoError(t, err)
+		require.Equal(t, exp, result)
+	}
+
+	// zero services
+	try(nil, []*structs.ServiceRegistration{}, "1|aaa")
+	try(nil, []*structs.ServiceRegistration{}, "2|aaa")
+
+	// some unique services
+	regs := []*structs.ServiceRegistration{
+		{ID: "abc001", ServiceName: "s1"},
+		{ID: "abc002", ServiceName: "s1"},
+		{ID: "abc003", ServiceName: "s1"},
+	}
+
+	// same key, increasing n -> maintains order (n=1)
+	try(regs, []*structs.ServiceRegistration{
+		{ID: "abc002", ServiceName: "s1"},
+	}, "1|aaa")
+
+	// same key, increasing n -> maintains order (n=2)
+	try(regs, []*structs.ServiceRegistration{
+		{ID: "abc002", ServiceName: "s1"},
+		{ID: "abc003", ServiceName: "s1"},
+	}, "2|aaa")
+
+	// same key, increasing n -> maintains order (n=3)
+	try(regs, []*structs.ServiceRegistration{
+		{ID: "abc002", ServiceName: "s1"},
+		{ID: "abc003", ServiceName: "s1"},
+		{ID: "abc001", ServiceName: "s1"},
+	}, "3|aaa")
+
+	// unique key -> different orders
+	try(regs, []*structs.ServiceRegistration{
+		{ID: "abc001", ServiceName: "s1"},
+		{ID: "abc002", ServiceName: "s1"},
+		{ID: "abc003", ServiceName: "s1"},
+	}, "3|bbb")
+
+	// another key -> another order
+	try(regs, []*structs.ServiceRegistration{
+		{ID: "abc002", ServiceName: "s1"},
+		{ID: "abc003", ServiceName: "s1"},
+		{ID: "abc001", ServiceName: "s1"},
+	}, "3|ccc")
 }

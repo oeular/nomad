@@ -447,3 +447,27 @@ func TestServiceRegistrationByNameRequest_StaleReadSupport(t *testing.T) {
 	req := &ServiceRegistrationByNameRequest{}
 	require.True(t, req.IsRead())
 }
+
+func TestServiceRegistration_HashWith(t *testing.T) {
+	a := ServiceRegistration{
+		Address: "10.0.0.1",
+		Port:    9999,
+	}
+
+	// same service, same key -> same hash
+	require.Equal(t, a.HashWith("aaa"), a.HashWith("aaa"))
+
+	// same service, different key -> different hash
+	require.NotEqual(t, a.HashWith("aaa"), a.HashWith("bbb"))
+
+	b := ServiceRegistration{
+		Address: "10.0.0.2",
+		Port:    9998,
+	}
+
+	// different service, same key -> different hash
+	require.NotEqual(t, a.HashWith("aaa"), b.HashWith("aaa"))
+
+	// different service, different key -> different hash
+	require.NotEqual(t, a.HashWith("aaa"), b.HashWith("bbb"))
+}

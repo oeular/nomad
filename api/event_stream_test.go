@@ -281,3 +281,51 @@ func TestEventStream_PayloadValueHelpers(t *testing.T) {
 		})
 	}
 }
+
+func TestEvent_Stream_Ports(t *testing.T) {
+	testutil.Parallel(t)
+
+	c, s := makeClient(t, nil, nil)
+	defer s.Stop()
+
+	// register job to generate events
+	jobs := c.Jobs()
+	job := testJob()
+	job.TaskGroups[0].Networks = []*NetworkResource{
+		{
+			DynamicPorts: []Port{
+				{
+					Label: "http",
+					Value: 80,
+				},
+			},
+		},
+	}
+	resp2, _, err := jobs.Register(job, nil)
+	require.Nil(t, err)
+	require.NotNil(t, resp2)
+
+	// build event stream request
+	events := c.EventStream()
+	q := &QueryOptions{}
+	topics := map[Topic][]string{
+		TopicAll: {*job.ID},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	streamCh, err := events.Stream(ctx, topics, 0, q)
+	require.NoError(t, err)
+
+	select {
+	case event := <-streamCh:
+		require.Nil(t, event.Err)
+		payload, decodeErr := event.Events[0].decodePayload()
+		require.NoError(t, decodeErr)
+		require.NotNil(t, payload.Job)
+		require.Equal(t, 80, payload.Job.TaskGroups[0].Networks[0].DynamicPorts[0].Value)
+	case <-time.After(20 * time.Second):
+		require.Fail(t, "failed waiting for event stream event")
+	}
+}

@@ -6618,9 +6618,11 @@ func (s *StateStore) SecureVariablesByPath(ws memdb.WatchSet, namespace, path st
 	return nil, nil
 }
 
-func (s *StateStore) UpsertSecureVariables(index uint64, dirEntries []*structs.DirEntry) error {
+func (s *StateStore) UpsertSecureVariables(msgType structs.MessageType, index uint64, dirEntries []*structs.DirEntry) error {
 	txn := s.db.WriteTxn(index)
 	defer txn.Abort()
+
+	// TODO: split on msgType for create vs update
 
 	for _, dirEntry := range dirEntries {
 		if err := s.upsertSecureVariableImpl(index, txn, dirEntry); err != nil {
@@ -6652,5 +6654,17 @@ func (s *StateStore) upsertSecureVariableImpl(index uint64, txn *txn, dirEntry *
 	if err := txn.Insert(TableSecureVariables, dirEntry); err != nil {
 		return fmt.Errorf("dir entry insert failed: %v", err)
 	}
+	return nil
+}
+
+func (s *StateStore) DeleteSecureVariables(msgType structs.MessageType, index uint64, paths []string) error {
+	return nil
+}
+
+func (s *StateStore) UpsertRootKeyMeta(index uint64, rootKeyMeta *structs.RootKeyMeta) error {
+	return nil
+}
+
+func (s *StateStore) DeleteRootKeyMeta(index uint64, keyID string) error {
 	return nil
 }

@@ -13,7 +13,7 @@ type SecureVariables struct {
 	encrypter *Encrypter
 }
 
-func (sv *SecureVariables) Create(req *structs.SecureVariablesCreateRequest) (*structs.SecureVariablesCreateResponse, error) {
+func (sv *SecureVariables) Create(req *structs.SecureVariablesUpsertRequest) (*structs.SecureVariablesUpsertResponse, error) {
 	return nil, nil
 }
 
@@ -25,10 +25,10 @@ func (sv *SecureVariables) Read(req *structs.SecureVariablesReadRequest) (*struc
 	return nil, nil
 }
 
-func (sv *SecureVariables) Update(req *structs.SecureVariablesUpdateRequest) (*structs.SecureVariablesUpdateResponse, error) {
+func (sv *SecureVariables) Update(req *structs.SecureVariablesUpsertRequest) (*structs.SecureVariablesUpsertResponse, error) {
 	return nil, nil
 }
 
-func (sv *SecureVariables) Destroy(req *structs.SecureVariablesDestroyRequest) (*structs.SecureVariablesDestroyResponse, error) {
+func (sv *SecureVariables) Delete(req *structs.SecureVariablesDeleteRequest) (*structs.SecureVariablesDeleteResponse, error) {
 	return nil, nil
 }

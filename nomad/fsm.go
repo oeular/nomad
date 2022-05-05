@@ -54,6 +54,10 @@ const (
 	ScalingEventsSnapshot                SnapshotType = 19
 	EventSinkSnapshot                    SnapshotType = 20
 	ServiceRegistrationSnapshot          SnapshotType = 21
+	SecureVariablesSnapshot              SnapshotType = 22
+	SecureVariablesQuotaSnapshot         SnapshotType = 23
+	RootKeyMetaSnapshot                  SnapshotType = 24
+
 	// Namespace appliers were moved from enterprise and therefore start at 64
 	NamespaceSnapshot SnapshotType = 64
 )
@@ -312,6 +316,14 @@ func (n *nomadFSM) Apply(log *raft.Log) interface{} {
 		return n.applyDeleteServiceRegistrationByID(msgType, buf[1:], log.Index)
 	case structs.ServiceRegistrationDeleteByNodeIDRequestType:
 		return n.applyDeleteServiceRegistrationByNodeID(msgType, buf[1:], log.Index)
+	case structs.SecureVariableUpsertRequestType:
+		return n.applySecureVariableUpsert(msgType, buf[1:], log.Index)
+	case structs.SecureVariableDeleteRequestType:
+		return n.applySecureVariableDelete(msgType, buf[1:], log.Index)
+	case structs.RootKeyMetaUpsertRequestType:
+		return n.applyRootKeyMetaUpsert(msgType, buf[1:], log.Index)
+	case structs.RootKeyMetaDeleteRequestType:
+		return n.applyRootKeyMetaDelete(msgType, buf[1:], log.Index)
 	}
 
 	// Check enterprise only message types.
@@ -1938,6 +1950,68 @@ func (n *nomadFSM) applyDeleteServiceRegistrationByNodeID(msgType structs.Messag
 
 	if err := n.state.DeleteServiceRegistrationByNodeID(msgType, index, req.NodeID); err != nil {
 		n.logger.Error("DeleteServiceRegistrationByNodeID failed", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *nomadFSM) applySecureVariableUpsert(msgType structs.MessageType, buf []byte, index uint64) interface{} {
+	defer metrics.MeasureSince([]string{"nomad", "fsm", "apply_secure_variable_upsert"}, time.Now())
+	var req structs.SecureVariablesUpsertRequest
+	if err := structs.Decode(buf, &req); err != nil {
+		panic(fmt.Errorf("failed to decode request: %v", err))
+	}
+
+	if err := n.state.UpsertSecureVariables(msgType, index, []*structs.DirEntry{req.Data}); err != nil {
+		n.logger.Error("UpsertSecureVariables failed", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *nomadFSM) applySecureVariableDelete(msgType structs.MessageType, buf []byte, index uint64) interface{} {
+	defer metrics.MeasureSince([]string{"nomad", "fsm", "apply_secure_variable_delete"}, time.Now())
+	var req structs.SecureVariablesDeleteRequest
+	if err := structs.Decode(buf, &req); err != nil {
+		panic(fmt.Errorf("failed to decode request: %v", err))
+	}
+
+	if err := n.state.DeleteSecureVariables(msgType, index, []string{req.Path}); err != nil {
+		n.logger.Error("UpsertSecureVariables failed", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *nomadFSM) applyRootKeyMetaUpsert(msgType structs.MessageType, buf []byte, index uint64) interface{} {
+	defer metrics.MeasureSince([]string{"nomad", "fsm", "apply_root_key_meta_upsert"}, time.Now())
+
+	var req structs.KeyringUpdateRootKeyMetaRequest
+	if err := structs.Decode(buf, &req); err != nil {
+		panic(fmt.Errorf("failed to decode request: %v", err))
+	}
+
+	if err := n.state.UpsertRootKeyMeta(index, req.RootKeyMeta); err != nil {
+		n.logger.Error("UpsertRootKeyMeta failed", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *nomadFSM) applyRootKeyMetaDelete(msgType structs.MessageType, buf []byte, index uint64) interface{} {
+	defer metrics.MeasureSince([]string{"nomad", "fsm", "apply_root_key_meta_delete"}, time.Now())
+
+	var req structs.KeyringDeleteRootKeyRequest
+	if err := structs.Decode(buf, &req); err != nil {
+		panic(fmt.Errorf("failed to decode request: %v", err))
+	}
+
+	if err := n.state.DeleteRootKeyMeta(index, req.KeyID); err != nil {
+		n.logger.Error("DeleteRootKeyMeta failed", "error", err)
 		return err
 	}
 

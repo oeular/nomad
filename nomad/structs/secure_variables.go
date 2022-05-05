@@ -86,8 +86,18 @@ type KeyringRotateRootKeyResponse struct {
 	WriteMeta
 }
 
+type KeyringListRootKeyMetaRequest struct {
+	// TODO
+	QueryOptions
+}
+
+type KeyringListRootKeyMetaResponse struct {
+	Keys []*RootKeyMeta
+	QueryMeta
+}
+
 type KeyringUpdateRootKeyRequest struct {
-	RootKey RootKey
+	RootKey *RootKey
 	WriteRequest
 }
 
@@ -95,13 +105,13 @@ type KeyringUpdateRootKeyResponse struct {
 	WriteMeta
 }
 
-type KeyringListRootKeyMetaRequest struct {
-	QueryOptions
+type KeyringUpdateRootKeyMetaRequest struct {
+	RootKeyMeta *RootKeyMeta
+	WriteRequest
 }
 
-type KeyringListRootKeyMetaResponse struct {
-	Keyring []RootKeyMeta
-	QueryMeta
+type KeyringUpdateRootKeyMetaResponse struct {
+	WriteMeta
 }
 
 type KeyringDeleteRootKeyRequest struct {
@@ -113,12 +123,12 @@ type KeyringDeleteRootKeyResponse struct {
 	WriteMeta
 }
 
-type SecureVariablesCreateRequest struct {
+type SecureVariablesUpsertRequest struct {
 	Data *DirEntry
 	WriteRequest
 }
 
-type SecureVariablesCreateResponse struct {
+type SecureVariablesUpsertResponse struct {
 	WriteMeta
 }
 
@@ -142,20 +152,11 @@ type SecureVariablesReadResponse struct {
 	QueryMeta
 }
 
-type SecureVariablesUpdateRequest struct {
-	Data *DirEntry
-	WriteRequest
-}
-
-type SecureVariablesUpdateResponse struct {
-	WriteMeta
-}
-
-type SecureVariablesDestroyRequest struct {
+type SecureVariablesDeleteRequest struct {
 	Path string
 	WriteRequest
 }
 
-type SecureVariablesDestroyResponse struct {
+type SecureVariablesDeleteResponse struct {
 	WriteMeta
 }

@@ -1,23 +1,34 @@
 package nomad
 
-import "crypto/cipher"
+import (
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/nomad/nomad/structs"
+)
 
-type KeyRing struct {
-	Ciphers map[string]cipher.AEAD // map of key IDs to ciphers
+// SecureVariables endpoint serves RPCs for storing and retrieving
+// encrypted variables
+type SecureVariables struct {
+	srv       *Server
+	logger    hclog.Logger
+	encrypter *Encrypter
 }
 
-// Encrypt takes the serialized map[string][]byte from
-// DirEntry.UnencryptedData, generates an appropriately-sized nonce
-// for the algorithm, and encrypts the data with the ciper for the
-// CurrentRootKeyID. The buffer returned includes the nonce.
-func (k *KeyRing) Encrypt(unencryptedData []byte, keyID string) []byte {
-	// TODO: actually encrypt!
-	return unencryptedData
+func (sv *SecureVariables) Create(req *structs.SecureVariablesCreateRequest) (*structs.SecureVariablesCreateResponse, error) {
+	return nil, nil
 }
 
-// Decrypt takes an encrypted buffer and then root key ID. It extracts
-// the nonce, decrypts the content, and returns the cleartext data.
-func (k *KeyRing) Decrypt(encryptedData []byte, keyID string) ([]byte, error) {
-	// TODO: actually decrypt!
-	return encryptedData, nil
+func (sv *SecureVariables) List(req *structs.SecureVariablesListRequest) (*structs.SecureVariablesListResponse, error) {
+	return nil, nil
+}
+
+func (sv *SecureVariables) Read(req *structs.SecureVariablesReadRequest) (*structs.SecureVariablesReadResponse, error) {
+	return nil, nil
+}
+
+func (sv *SecureVariables) Update(req *structs.SecureVariablesUpdateRequest) (*structs.SecureVariablesUpdateResponse, error) {
+	return nil, nil
+}
+
+func (sv *SecureVariables) Destroy(req *structs.SecureVariablesDestroyRequest) (*structs.SecureVariablesDestroyResponse, error) {
+	return nil, nil
 }

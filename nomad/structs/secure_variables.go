@@ -75,27 +75,27 @@ const (
 	EncryptionAlgorithmAES256GCM EncryptionAlgorithm = "aes256-gcm"
 )
 
-type KeyringRotateKeyRequest struct {
+type KeyringRotateRootKeyRequest struct {
 	Algorithm EncryptionAlgorithm
 	Full      bool
 	WriteRequest
 }
 
-type KeyringRotateKeyResponse struct {
+type KeyringRotateRootKeyResponse struct {
 	KeyID string
 	WriteMeta
 }
 
-type KeyringUpdateRequest struct {
+type KeyringUpdateRootKeyRequest struct {
 	RootKey RootKey
 	WriteRequest
 }
 
-type KeyringUpdateResponse struct {
+type KeyringUpdateRootKeyResponse struct {
 	WriteMeta
 }
 
-type KeyringListRootKeyMeta struct {
+type KeyringListRootKeyMetaRequest struct {
 	QueryOptions
 }
 
@@ -104,11 +104,58 @@ type KeyringListRootKeyMetaResponse struct {
 	QueryMeta
 }
 
-type KeyringDeleteRequest struct {
+type KeyringDeleteRootKeyRequest struct {
 	KeyID string
 	WriteRequest
 }
 
-type KeyringDeleteResponse struct {
+type KeyringDeleteRootKeyResponse struct {
+	WriteMeta
+}
+
+type SecureVariablesCreateRequest struct {
+	Data *DirEntry
+	WriteRequest
+}
+
+type SecureVariablesCreateResponse struct {
+	WriteMeta
+}
+
+type SecureVariablesListRequest struct {
+	// TODO
+	QueryOptions
+}
+
+type SecureVariablesListResponse struct {
+	Data []*DirEntry
+	QueryMeta
+}
+
+type SecureVariablesReadRequest struct {
+	Path string
+	QueryOptions
+}
+
+type SecureVariablesReadResponse struct {
+	Data *DirEntry
+	QueryMeta
+}
+
+type SecureVariablesUpdateRequest struct {
+	Data *DirEntry
+	WriteRequest
+}
+
+type SecureVariablesUpdateResponse struct {
+	WriteMeta
+}
+
+type SecureVariablesDestroyRequest struct {
+	Path string
+	WriteRequest
+}
+
+type SecureVariablesDestroyResponse struct {
 	WriteMeta
 }

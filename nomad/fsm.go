@@ -2122,6 +2122,18 @@ func (s *nomadSnapshot) Persist(sink raft.SnapshotSink) error {
 		sink.Cancel()
 		return err
 	}
+	if err := s.persistSecureVariables(sink, encoder); err != nil {
+		sink.Cancel()
+		return err
+	}
+	if err := s.persistSecureVariablesQuotas(sink, encoder); err != nil {
+		sink.Cancel()
+		return err
+	}
+	if err := s.persistRootKeyMeta(sink, encoder); err != nil {
+		sink.Cancel()
+		return err
+	}
 	return nil
 }
 
@@ -2647,6 +2659,75 @@ func (s *nomadSnapshot) persistCSIVolumes(sink raft.SnapshotSink,
 		// Write out a volume snapshot
 		sink.Write([]byte{byte(CSIVolumeSnapshot)})
 		if err := encoder.Encode(volume); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *nomadSnapshot) persistSecureVariables(sink raft.SnapshotSink,
+	encoder *codec.Encoder) error {
+
+	ws := memdb.NewWatchSet()
+	dirEntries, err := s.snap.SecureVariables(ws)
+	if err != nil {
+		return err
+	}
+
+	for {
+		raw := dirEntries.Next()
+		if raw == nil {
+			break
+		}
+		dirEntry := raw.(*structs.DirEntry)
+		sink.Write([]byte{byte(SecureVariablesSnapshot)})
+		if err := encoder.Encode(dirEntry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *nomadSnapshot) persistSecureVariablesQuotas(sink raft.SnapshotSink,
+	encoder *codec.Encoder) error {
+
+	ws := memdb.NewWatchSet()
+	quotas, err := s.snap.SecureVariablesQuotas(ws)
+	if err != nil {
+		return err
+	}
+
+	for {
+		raw := quotas.Next()
+		if raw == nil {
+			break
+		}
+		dirEntry := raw.(*structs.SecureVariablesQuota)
+		sink.Write([]byte{byte(SecureVariablesQuotaSnapshot)})
+		if err := encoder.Encode(dirEntry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *nomadSnapshot) persistRootKeyMeta(sink raft.SnapshotSink,
+	encoder *codec.Encoder) error {
+
+	ws := memdb.NewWatchSet()
+	keys, err := s.snap.RootKeyMetas(ws)
+	if err != nil {
+		return err
+	}
+
+	for {
+		raw := keys.Next()
+		if raw == nil {
+			break
+		}
+		key := raw.(*structs.RootKeyMeta)
+		sink.Write([]byte{byte(RootKeyMetaSnapshot)})
+		if err := encoder.Encode(key); err != nil {
 			return err
 		}
 	}

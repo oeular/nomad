@@ -72,6 +72,7 @@ func init() {
 		serviceRegistrationsTableSchema,
 		secureVariablesTableSchema,
 		secureVariablesTombstonesTableSchema,
+		secureVariablesRootKeyMetaSchema,
 	}...)
 }
 
@@ -1208,6 +1209,7 @@ func serviceRegistrationsTableSchema() *memdb.TableSchema {
 const TableSecureVariables = "secure_variables"
 const TableSecureVariablesTombstones = "secure_variables_tombstones"
 const TableSecureVariablesQuotas = "secure_variables_quota"
+const TableRootKeyMeta = "secure_variables_root_key_meta"
 
 // secureVariablesTableSchema returns the MemDB schema for Nomad
 // secure variables.
@@ -1273,6 +1275,25 @@ func secureVariablesTombstonesTableSchema() *memdb.TableSchema {
 							Field: "Path",
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+// secureVariablesRootKeyMetaSchema returns the MemDB schema for Nomad
+// secure variables root keys
+func secureVariablesRootKeyMetaSchema() *memdb.TableSchema {
+	return &memdb.TableSchema{
+		Name: TableRootKeyMeta,
+		Indexes: map[string]*memdb.IndexSchema{
+			indexID: {
+				Name:         indexID,
+				AllowMissing: false,
+				Unique:       true,
+				Indexer: &memdb.StringFieldIndex{
+					Field:     "KeyID",
+					Lowercase: true,
 				},
 			},
 		},

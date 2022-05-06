@@ -87,6 +87,11 @@ type QueryOptions struct {
 	// Currently only supported by specific endpoints.
 	Reverse bool
 
+	// Choose is used when selecting a subset of services from the normal
+	// complete list of services. Format is <count>|<hash>, where the hash is
+	// typically the allocation ID of the requesting task.
+	Choose string
+
 	// ctx is an optional context pass through to the underlying HTTP
 	// request layer. Use Context() and WithContext() to manage this.
 	ctx context.Context
@@ -610,6 +615,9 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 	if q.Filter != "" {
 		r.params.Set("filter", q.Filter)
+	}
+	if q.Choose != "" {
+		r.params.Set("choose", q.Choose)
 	}
 	if q.PerPage != 0 {
 		r.params.Set("per_page", fmt.Sprint(q.PerPage))

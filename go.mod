@@ -2,6 +2,9 @@ module github.com/hashicorp/nomad
 
 go 1.17
 
+// remove
+replace github.com/hashicorp/consul-template => ../consul-template
+
 // Pinned dependencies are noted in github.com/hashicorp/nomad/issues/11826
 replace (
 	github.com/Microsoft/go-winio => github.com/endocrimes/go-winio v0.4.13-0.20190628114223-fb47a8b41948
